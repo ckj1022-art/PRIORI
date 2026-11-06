@@ -83,6 +83,8 @@ button.chip:disabled{opacity:.4;cursor:default}
 .origin em{font-style:normal;color:var(--muted);font-size:13px}
 .stem{font-family:var(--f-display);font-size:18px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
 .opts{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:4px 14px;font-family:var(--f-display);font-size:16.5px}
+.qfig{margin:2px 0 0;align-self:flex-start;max-width:100%;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px}
+.qfig img{display:block;max-width:100%;max-height:340px;border-radius:4px}
 .fig{font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding-left:10px}
 details summary{cursor:pointer;color:var(--muted);font-size:13px;width:max-content}
 .ans{font-family:var(--f-display);color:var(--red);font-size:16px;margin-top:4px}
@@ -112,6 +114,8 @@ footer{color:var(--muted);font-size:12.5px;text-align:center}
 .pdf-stage .qn .tag{grid-column:2;font-family:var(--f-body);font-size:11.5px;color:#666;letter-spacing:.04em}
 .pdf-stage .qn .st{white-space:pre-wrap}
 .pdf-stage .qn ol{grid-column:2;list-style:none;margin:2px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:2px 18px;font-size:18px}
+.pdf-stage .qn .fgi{grid-column:2;margin:4px 0}
+.pdf-stage .qn .fgi img{max-width:70%;max-height:300px;display:block}
 .pdf-stage .qn .fg{grid-column:2;font-family:var(--f-body);font-size:13px;color:#444;border:1px dashed #999;padding:6px 10px;border-radius:4px}
 .pdf-stage .qn .sp{grid-column:2;font-family:var(--f-body);font-size:15px;margin-top:6px}
 .pdf-stage .sec{font-family:var(--f-display);font-size:20px;border-left:5px solid #111;padding-left:10px;margin-top:4px}
@@ -524,7 +528,7 @@ function render(){
         <div class="origin"><span>${esc(qSource(q))}</span>${q.source?`<em>${esc(q.source)}</em>`:''}${pre?'<span class="chip pre">先備概念</span>':''}</div>
         <div class="stem">${hl(q.stem, terms)}</div>
         ${q.options.length?`<ol class="opts">${q.options.map((x,i)=>`<li>${OPT[i]||(i+1)+'.'} ${esc(x)}</li>`).join('')}</ol>`:''}
-        ${q.hasFigure&&q.figureDesc?`<div class="fig">附圖：${esc(q.figureDesc)}</div>`:''}
+        ${q.figure?`<figure class="qfig"><img src="${esc(q.figure)}" alt="${esc(q.figureDesc||'題目附圖')}" loading="lazy"></figure>`:(q.hasFigure&&q.figureDesc?`<div class="fig">附圖：${esc(q.figureDesc)}</div>`:'')}
         <div class="chips">${q._kx?`<span class="chip kx">康軒 ${esc(q._kx.label)}</span>`:''}${q.domain?`<span class="chip dom">${esc(q.domain)}</span>`:''}${q.unit?`<span class="chip dom">${hl(q.unit,terms)}</span>`:''}${q.concepts.map(c=>`<span class="chip">${hl(c,terms)}</span>`).join('')}</div>
         <details><summary>看答案</summary><div class="ans">${esc(q.answer||'—')}${q.answerSource==='ai'?' <span class="chip ai" style="font-family:var(--f-body)">AI 解答，請核對</span>':''}</div></details>
       </div></article>`; }).join('');
@@ -609,18 +613,29 @@ function optTable(opts){
   for(let i=0;i<opts.length;i+=2){ rows += `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(`(${i+1}) ${opts[i]}`)}${cell(opts[i+1]!=null?`(${i+2}) ${opts[i+1]}`:'')}</w:tr>`; }
   return `<w:tbl><w:tblPr><w:tblW w:w="8800" w:type="dxa"/><w:tblInd w:w="560" w:type="dxa"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="4400"/><w:gridCol w:w="4400"/></w:tblGrid>${rows}</w:tbl>`;
 }
+async function figData(src){
+  try{ const buf=await (await fetch(src)).arrayBuffer(); const blob=new Blob([buf]); const url=URL.createObjectURL(blob);
+    const im=new Image(); im.src=url; await im.decode(); const w=im.naturalWidth, h=im.naturalHeight; URL.revokeObjectURL(url);
+    const isPng=/^data:image\/png|\.png($|\?)/i.test(src); return {buf, w, h, ext:isPng?'png':'jpeg'}; }catch{ return null; }
+}
+function picXML(rid, n, w, h){
+  const maxW=4320000, maxH=2700000; let cx=w*9525, cy=h*9525; const k=Math.min(1, maxW/cx, maxH/cy); cx=Math.round(cx*k); cy=Math.round(cy*k);
+  return `<w:p><w:pPr><w:keepNext/><w:spacing w:before="60" w:after="60"/><w:ind w:left="560"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${n}" name="附圖${n}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${n}" name="附圖${n}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+}
 async function makeDocx(qs,o){
   await ensureZip();
-  let body='';
+  let body=''; const media=[];
   body += para(run(o.title,{size:40,bold:true}),{align:'center',after:60});
   body += para(run(`共 ${qs.length} 題　${new Date().toLocaleDateString('zh-TW')}`,{size:20,color:'555555',font:SANS}),{align:'center',after:120});
   body += para(run('班級：＿＿＿＿＿　座號：＿＿＿＿　姓名：＿＿＿＿＿＿＿＿',{size:26,font:SANS}),{after:240,border:true});
+  for(const q of qs){ q._fig = q.figure ? await figData(q.figure) : null; }
   qs.forEach((q,i)=>{
     const ch=q.options.length>0;
     body += para(run(`${i+1}. ${ch?'(　　) ':''}`,{size:28})+run(q.stem,{size:28}),{before:200,after:40,indent:560,hanging:560,keepNext:true});
     if(o.tag) body += para(run(qSource(q)+(q.source?'・'+q.source:''),{size:18,color:'777777',font:SANS}),{after:40,indent:560,keepNext:true});
+    if(q._fig){ const n=media.length+1; media.push({...q._fig, rid:'rIdImg'+n, name:'image'+n+'.'+q._fig.ext}); body += picXML('rIdImg'+n, n, q._fig.w, q._fig.h); }
+    else if(q.hasFigure&&q.figureDesc) body += para(run('〔附圖〕'+q.figureDesc,{size:21,color:'444444',font:SANS}),{after:40,indent:560});
     if(ch) body += optTable(q.options);
-    if(q.hasFigure&&q.figureDesc) body += para(run('〔附圖〕'+q.figureDesc,{size:21,color:'444444',font:SANS}),{after:40,indent:560});
     if(!ch) body += para(run('答：＿＿＿＿＿＿＿＿＿＿＿＿',{size:26,font:SANS}),{before:o.space?600:80,indent:560});
     else if(o.space) body += para('',{after:500});
   });
@@ -629,18 +644,19 @@ async function makeDocx(qs,o){
     qs.forEach((q,i)=> body += para(run(`${i+1}. `,{size:24,bold:true,font:SANS})+run(q.answer||'—',{size:24,font:SANS})+(o.tag?run(`　（${qSource(q)}）`,{size:18,color:'777777',font:SANS}):''),{after:40,indent:480,hanging:480}));
   }
   const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body}<w:sectPr><w:footerReference w:type="default" r:id="rIdF"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1000" w:right="1000" w:bottom="1000" w:left="1000" w:header="500" w:footer="500" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><w:body>${body}<w:sectPr><w:footerReference w:type="default" r:id="rIdF"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1000" w:right="1000" w:bottom="1000" w:left="1000" w:header="500" w:footer="500" w:gutter="0"/></w:sectPr></w:body></w:document>`;
   const footer = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:sz w:val="18"/><w:color w:val="888888"/></w:rPr><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:rPr><w:sz w:val="18"/><w:color w:val="888888"/></w:rPr><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:rPr><w:sz w:val="18"/><w:color w:val="888888"/></w:rPr><w:fldChar w:fldCharType="end"/></w:r></w:p></w:ftr>`;
   const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="${KAI}"/><w:sz w:val="28"/><w:lang w:val="en-US" w:eastAsia="zh-TW"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="80"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>`;
   const zip = new window.JSZip();
   zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>`);
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>`);
   zip.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
   zip.file('word/_rels/document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdS" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rIdF" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>`);
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdS" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rIdF" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>${media.map(m=>`<Relationship Id="${m.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${m.name}"/>`).join('')}</Relationships>`);
+  media.forEach(m=>zip.file('word/media/'+m.name, m.buf));
   zip.file('word/document.xml', doc); zip.file('word/styles.xml', styles); zip.file('word/footer1.xml', footer);
   const blob = await zip.generateAsync({type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=o.title.replace(/[\\/:*?"<>|：]/g,'_')+'.docx';
@@ -655,11 +671,12 @@ async function makePdf(qs, o, prog){
     mk(`<div class="qn"><div class="no">${ch?'(　　) ':''}${i+1}.</div><div class="st">${esc(q.stem)}</div>
       ${o.tag?`<div class="tag">${esc(qSource(q))}${q.source?'・'+esc(q.source):''}</div>`:''}
       ${ch?`<ol>${q.options.map((x,j)=>`<li>(${j+1}) ${esc(x)}</li>`).join('')}</ol>`:''}
-      ${q.hasFigure&&q.figureDesc?`<div class="fg">附圖說明：${esc(q.figureDesc)}</div>`:''}
+      ${q.figure?`<div class="fgi"><img src="${esc(q.figure)}" alt=""></div>`:(q.hasFigure&&q.figureDesc?`<div class="fg">附圖說明：${esc(q.figureDesc)}</div>`:'')}
       ${o.space?`<div class="sp" style="height:${ch?56:96}px">${ch?'':'答：＿＿＿＿＿＿＿＿＿＿'}</div>`:(ch?'':'<div class="sp">答：＿＿＿＿＿＿＿＿＿＿</div>')}</div>`); });
   if(o.key){ mk(`<div class="sec">答案（${esc(o.title)}）</div>`,{newPage:true});
     for(let i=0;i<qs.length;i+=8) mk(`<div class="ak">${qs.slice(i,i+8).map((q,j)=>`<div><b>${i+j+1}.</b></div><div>${esc(q.answer||'—')}</div>`).join('')}</div>`); }
-  prog('準備字型…');
+  prog('準備字型與附圖…');
+  await Promise.all([...stage.querySelectorAll('img')].map(i=>i.decode().catch(()=>i.remove())));
   try{ const t=stage.textContent; await Promise.all([document.fonts.load('19px "LXGW WenKai TC"',t),document.fonts.load('15px "Noto Sans TC"',t),document.fonts.load('bold 15px "Noto Sans TC"',t)]); await document.fonts.ready; }catch{}
   const { jsPDF } = window.jspdf; const pdf=new jsPDF({unit:'mm',format:'a4'});
   const W=210,H=297,M=13,CW=W-2*M; let y=M;
