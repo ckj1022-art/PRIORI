@@ -142,6 +142,18 @@ input[type=text]:focus,select:focus,textarea:focus{outline:none;border-color:var
 .chip{background:var(--sheet-2);border-color:var(--line-2)}
 button.chip:hover:not(:disabled){border-color:var(--accent)}
 button.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.portal{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.entry{font:inherit;text-align:left;display:flex;align-items:center;gap:18px;padding:20px 24px;border-radius:var(--r);border:1.5px solid var(--line);background:var(--sheet);color:var(--ink);cursor:pointer;box-shadow:var(--shadow);transition:border-color .15s,background .15s}
+.entry:hover{border-color:var(--accent)}
+.entry .ico{width:58px;height:58px;flex:none;border-radius:14px;display:grid;place-items:center;font-family:var(--f-head);font-weight:900;font-size:30px;background:var(--accent-soft);color:var(--accent)}
+.entry .ico.en{background:var(--pen-soft);color:var(--pen);font-family:Georgia,"Times New Roman",serif;font-size:28px}
+.entry b{display:block;font-family:var(--f-head);font-size:24px;letter-spacing:.06em}
+.entry small{display:block;color:var(--muted);font-size:13.5px;margin-top:2px}
+.entry[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent),var(--shadow)}
+.entry[data-s="english"][aria-pressed="true"]{border-color:var(--pen);background:var(--pen-soft);box-shadow:0 0 0 1px var(--pen),var(--shadow)}
+.listen{font-size:14px;background:var(--accent-soft);border-radius:10px;padding:10px 14px}
+.listen b{color:var(--accent);margin-right:6px}
+@media (max-width:560px){.portal{gap:10px}.entry{padding:14px;gap:10px}.entry .ico{width:42px;height:42px;font-size:22px}.entry b{font-size:19px}.entry small{display:none}}
 .chip.kx{background:var(--accent-soft);color:var(--accent);font-weight:700;border-color:transparent}
 .chip.ai{background:var(--pen-soft);color:var(--pen);border-color:transparent}
 .qcard{position:relative;border-radius:var(--r);padding:16px 20px;gap:4px 26px;transition:box-shadow .15s,border-color .15s}
@@ -169,11 +181,16 @@ mark{background:color-mix(in srgb,var(--mark) 70%,transparent)}
 <main><div class="wrap">
   <div id="load-msg"></div>
 
+  <section class="portal" aria-label="選擇科目">
+    <button class="entry" data-s="math" aria-pressed="true"><span class="ico">∑</span><span><b>數學</b><small id="cnt-math">國小學習扶助・數學</small></span></button>
+    <button class="entry" data-s="english" aria-pressed="false"><span class="ico en">Aa</span><span><b>英語</b><small id="cnt-english">國小學習扶助・英語</small></span></button>
+  </section>
   <section class="panel" aria-label="搜尋條件">
     <div class="row" style="gap:20px;align-items:flex-end">
       <div class="field"><span class="label">年級</span><div class="seg" id="f-grade"></div></div>
+      <div class="field" id="ver-field"><span class="label">教科書版本</span><div class="seg" id="f-ver"><button data-v="kx">康軒</button><button data-v="hl">翰林</button><button data-v="ny">南一</button></div></div>
       <label class="row" style="gap:6px;font-size:14px"><input type="checkbox" id="f-prev"> 一併列出前一年級（先備概念）</label>
-      <div class="field"><span class="label">領域</span><select id="f-domain"><option value="">全部領域</option><option>數與量</option><option>空間與形狀</option><option>關係</option><option>資料與不確定性</option></select></div>
+      <div class="field"><span class="label" id="f-domain-label">領域</span><select id="f-domain"><option value="">全部領域</option><option>數與量</option><option>空間與形狀</option><option>關係</option><option>資料與不確定性</option></select></div>
       <div class="field"><span class="label">學年度</span><select id="f-year"><option value="">全部</option></select></div>
     </div>
     <div class="field"><span class="label">單元或概念</span>
@@ -361,6 +378,313 @@ function kxClassify(q){
   return best;
 }
 function kxOf(q){ return kxByCode(q.kxUnit) || kxClassify(q); }
+/* ===== 翰林、南一國小數學單元對照 =====
+   翰林：1～5上、1～5下依 114 學年度版本與均一「類翰林版」；6上、6下依 115 學年度版本
+   南一：上冊依 114 學年度版本；下冊依均一「類南一版」
+   每單元：[學期, 單元序, 名稱, 關鍵字] */
+const HL = {
+ 1: [
+  ['上',1,'10以內的數',['10以內的數','點數','數數']],
+  ['上',2,'比長短',['比長短','長度的比較','長度的直接比較','直接比較','間接比較','高矮','最高','最短','最長','一樣長','起點','對齊','遞移','比較與遞移']],
+  ['上',3,'順序與多少',['序數','第幾','順序','排隊','比多少','比較多少','多多少','少多少','前面','位置','基數']],
+  ['上',4,'分與合',['分與合','合成','分解']],
+  ['上',5,'認識形狀',['形狀','方盒','圓罐','球','立體','積木','堆疊','正方體','三角形','圓形']],
+  ['上',6,'10以內的加法',['10以內的加法','添加型加法']],
+  ['上',7,'10以內的減法',['10以內的減法','10以內的加減','拿走型減法']],
+  ['上',8,'30以內的數',['30以內']],
+  ['上',9,'時間',['幾點','整點','點半','時鐘','鐘面','長針','短針','上午','中午','晚上','時刻','認識時間','時間']],
+  ['下',1,'20以內的加法',['18以內的加法','20以內的加法','20以內的進位加法','進位加法','湊十','交換律','加法']],
+  ['下',2,'長度',['有多長','個別單位','迴紋針','方格','□接起來','個□','測量','長度']],
+  ['下',3,'20以內的減法',['18以內的減法','20以內的減法','20以內的退位減法','退位減法','十幾減','減法']],
+  ['下',4,'100以內的數',['50以內','100以內','十位','個位','位值','定位板','幾個十','10個一數','十個一數','以十為單位','捆','2個一數','5個一數','倒數','大小比較','比大小','數列','最大','最小','二位數的組成','2的倍數','數數']],
+  ['下',5,'形狀與形體',['圖形','形體','拼排','圖形板','七巧板','三角形','正方形','長方形','圓形','立體']],
+  ['下',6,'數數看有多少元',['錢幣','元','錢']],
+  ['下',7,'幾月幾日星期幾',['日曆','星期','幾月','月曆']],
+  ['下',8,'兩位數的加減法',['二位數的加','二位數的減','二位數加','二位數減','二位數退位','兩位數','整十']],
+  ['下',9,'分類整理',['分類','整理','統計','記錄']],
+ ],
+ 2: [
+  ['上',1,'200以內的數',['200以內','300以內']],
+  ['上',2,'二位數的加減法',['二位數的直式','二位數的加法','二位數的減法','二位數退位','二位數進位','連加','直式減法','直式加法']],
+  ['上',3,'認識公分',['量長度','公分','直尺','刻度','個別單位','普遍單位','用尺']],
+  ['上',4,'加減應用',['加減關係','加減互逆','加減應用','加法和減法','加法與減法','部分與整體','比多少','比較型','多幾','比少','等號','大小比較','<、=、>','＜、＝、＞']],
+  ['上',5,'容量',['容量','容器','杯']],
+  ['上',6,'加減兩步驟',['加減兩步驟','兩步驟問題（加減）','連減','連續減法','兩步驟加減','先減後加','先加後減']],
+  ['上',7,'乘法（一）',['2的乘法','5的乘法','4的乘法','8的乘法']],
+  ['上',8,'時間',['幾時幾分','幾點幾分','時刻','時鐘','鐘面','數字鐘','電子鐘','時間','小時']],
+  ['上',9,'乘法（二）',['3的乘法','6的乘法','9的乘法','7的乘法']],
+  ['上',10,'面的大小比較',['面積','面的大小']],
+  ['下',1,'1000以內的數',['1000以內','三位數的組成','百位','百格板','個百','位值','錢幣','紙鈔','元']],
+  ['下',2,'重量',['重量','天平','輕重','最重','最輕']],
+  ['下',3,'加加減減',['三位數的加','三位數的減','三位數加','三位數減','三位數以內','三位數減法','三位數加法','估算','最接近','整百']],
+  ['下',4,'平面圖形與立體形體',['平面圖形','頂點','內部','外部','周界','周長','三角形','四邊形','正方形','長方形','五邊形','八邊形','角的認識','立體','正方體','長方體','柱','球']],
+  ['下',5,'乘法',['乘法','乘以','×','倍','0的乘法','1的乘法','10的乘法']],
+  ['下',6,'公尺與公分',['公尺','公尺與公分','公分與公尺','複名數','長度的計算','長度的合成']],
+  ['下',7,'乘與加兩步驟',['兩步驟','先乘','乘與減','乘法與減法','先加後乘','差的倍數']],
+  ['下',8,'年、月、日',['年、月、日','日曆','月曆','星期','幾月','閏年','大月','小月']],
+  ['下',9,'分裝與平分',['分分看','平分','等分','分裝']],
+  ['下',10,'認識分數',['分數','幾分之幾','單位分數']],
+ ],
+ 3: [
+  ['上',1,'10000以內的數',['10000以內','一萬以內的數','四位數的位值','位值','定位板','個千','個百','四位數的大小','四位數的讀寫','大小比較']],
+  ['上',2,'角與形狀',['角','直角','長方形','正方形','四邊形','三角形']],
+  ['上',3,'10000以內的加減',['四位數的加','四位數的減','四位數加','四位數減','四位數連續','加法估算','找錢','退位','進位加法','一萬以內的減法','加法與減法']],
+  ['上',4,'乘法',['乘法','乘以一位數','三位數乘','二位數乘','連乘','乘法與估算','乘積']],
+  ['上',5,'毫米與數線',['毫米','公分與毫米','數線','長度單位','複名數加法','複名數減法']],
+  ['上',6,'除法',['除法','有餘數','餘數','商','平分','包含除','等分除','偶數','奇數']],
+  ['上',7,'公斤與公克',['公斤','公克','重量','磅秤','秤面']],
+  ['上',8,'分數',['分數','單位分數','幾分之幾','假分數']],
+  ['上',9,'列表與規律',['規律','數列','下一個','表格','列表']],
+  ['下',1,'除法',['三位數除以一位數','商中間有0']],
+  ['下',2,'公升與毫升',['公升','毫升','容量']],
+  ['下',3,'分數與加法',['分數的加減','分數加法','分數減法','同分母分數加法','同分母分數減法']],
+  ['下',4,'圓',['圓','半徑','直徑','圓心','圓規']],
+  ['下',5,'兩步驟應用問題',['兩步驟','乘除','先乘','先除','先減後除','併式','連除']],
+  ['下',6,'一位小數',['小數','一位小數','0.1']],
+  ['下',7,'時間',['時間','小時','分鐘','秒','經過','時刻']],
+  ['下',8,'乘與除',['乘與除','乘法與除法','乘除互逆','驗算']],
+  ['下',9,'面積',['面積','周長','切割','拼合','拼排','重組','平方公分']],
+ ],
+ 4: [
+  ['上',1,'一億以內的數',['一億以內','億','萬','大數','千萬','百萬','以萬為單位']],
+  ['上',2,'乘法',['整數的乘法','乘以三位數','乘以二位數','二位數乘三位數','四位數乘','三位數乘','乘法進位','直式乘法','乘法']],
+  ['上',3,'角度',['角度','量角器','旋轉','周角','平角','直角','鐘面','度']],
+  ['上',4,'假分數與帶分數',['假分數','帶分數','真分數','分數數線','分數']],
+  ['上',5,'公里',['公里']],
+  ['上',6,'除法',['除法','除以二位數','除以三位數','商','餘數','試商','包含除','等分除']],
+  ['上',7,'三角形與全等',['三角形','等腰','正三角形','銳角三角形','鈍角三角形','直角三角形','全等']],
+  ['上',8,'兩步驟問題與併式',['兩步驟','併式','先乘除後加減','括號']],
+  ['上',9,'二位小數',['小數','二位小數','百分位','0.01','小數的加減','小數數線']],
+  ['上',10,'統計圖表',['長條圖','統計圖','統計表']],
+  ['下',1,'概數',['概數','四捨五入','無條件','估算','大約']],
+  ['下',2,'四則運算',['四則','分配律','結合律','交換律','運算規律','簡化計算','湊整','連乘','連除','多位數','末尾有0']],
+  ['下',3,'垂直、平行與四邊形',['四邊形','梯形','菱形','平行四邊形','長方形','正方形','垂直','平行','對角線']],
+  ['下',4,'分數（一）',['分數的整數倍','分數的加減','同分母','帶分數','假分數']],
+  ['下',5,'形體的大小',['立方公分','體積','形體']],
+  ['下',6,'小數乘法',['小數的乘法','小數乘']],
+  ['下',7,'周長與面積',['周長','面積','平方公尺','平方公分']],
+  ['下',8,'分數（二）',['等值分數','擴分','約分','分數與小數']],
+  ['下',9,'時間的計算',['時間','小時','分鐘','日']],
+  ['下',10,'規律',['規律','數量關係','數列']],
+ ],
+ 5: [
+  ['上',1,'折線圖',['折線圖','統計圖']],
+  ['上',2,'倍數與因數',['因數','倍數']],
+  ['上',3,'平面圖形',['多邊形','內角和','三角形','四邊形','兩邊和','邊長關係','全等']],
+  ['上',4,'公倍數與公因數',['公因數','公倍數','最大公因數','最小公倍數']],
+  ['上',5,'立體形體',['柱','錐','角柱','角錐','球','立體']],
+  ['上',6,'四則運算',['四則','先乘除後加減','併式','括號','分配律','結合律','速算','湊整','應用問題','平均','整數的乘法','整數的除法','多位數乘法','除法應用']],
+  ['上',7,'擴、約分與加減',['擴分','約分','通分','等值分數','最簡分數','異分母']],
+  ['上',8,'面積',['面積','平行四邊形的面積','三角形面積','三角形的面積','梯形面積','多邊形的面積']],
+  ['上',9,'乘以幾分之一',['分數的乘法','分數乘','整數乘以分數','分數倍','幾分之一']],
+  ['上',10,'扇形',['扇形','圓心角']],
+  ['下',1,'數的十進位結構',['多位小數','三位小數','千分位','小數的位值','十進位','小數的大小','小數的加減','兆','大數']],
+  ['下',2,'分數的計算',['分數的除法','分數除以整數','帶分數乘','分數的乘除','整數相除','分數表示','分數化成小數','分數']],
+  ['下',3,'長方體與正方體的體積',['體積','長方體','正方體','立方公分','立方公尺']],
+  ['下',4,'小數',['小數的乘法','小數乘以小數','小數除以整數','小數的除法','商到小數','小數點位置','概數','四捨五入','小數']],
+  ['下',5,'生活中的大單位',['公頃','公畝','平方公里','公噸']],
+  ['下',6,'時間的乘除',['時間','日','小時']],
+  ['下',7,'容積',['容積','容量']],
+  ['下',8,'比率與百分率',['比率','百分率','百分比','折']],
+  ['下',9,'表面積',['表面積']],
+  ['下',10,'線對稱圖形',['線對稱','對稱軸','對稱']],
+ ],
+ 6: [
+  ['上',1,'最大公因數與最小公倍數',['最大公因數','最小公倍數','質數','合數','質因數','互質','短除法','公因數','公倍數','因數','倍數','約分','最簡分數']],
+  ['上',2,'分數除法',['分數的除法','分數除以','除以分數','倒數','帶分數除','整數除以分數','除以帶分數']],
+  ['上',3,'小數除法',['小數的除法','小數除以','除以小數','小數的乘除','小數除法']],
+  ['上',4,'比與比值',['比值','比與比值','相等的比','比的']],
+  ['上',5,'兩量關係',['兩量關係','正比','數量關係','等量公理','未知數','用x','以x','按比例分配','按比分配']],
+  ['上',6,'圓周長與扇形周長',['圓周長','扇形周長','弧長','圓周率']],
+  ['上',7,'放大、縮小與比例尺',['縮圖','放大','縮小','比例尺']],
+  ['上',8,'怎樣解題',['怎樣解題','規律','和差','雞兔','植樹']],
+  ['下',1,'小數與分數的四則運算',['四則混合','分數與小數','小數化分數','分數的四則','分數的乘法','概數','四捨五入','分配律','四則運算','運算規律']],
+  ['下',2,'圓面積與扇形面積',['圓面積','扇形面積','半圓面積']],
+  ['下',3,'速率',['速率','分速','秒速','時速']],
+  ['下',4,'統計圖表',['圓形圖','統計圖','百分率']],
+  ['下',5,'怎樣解題',['怎樣解題','基準量','比較量','分數倍','和差','雞兔','植樹']],
+  ['下',6,'角柱與圓柱',['柱體','角柱','圓柱','體積','表面積']],
+ ],
+};
+const NY = {
+ 1: [
+  ['上',1,'數到10',['10以內的數','點數','數數']],
+  ['上',2,'比長短',['比長短','長度的比較','長度的直接比較','直接比較','間接比較','高矮','最高','最短','最長','一樣長','起點','對齊','遞移','比較與遞移']],
+  ['上',3,'分與合',['分與合','合成','分解']],
+  ['上',4,'順序和多少',['序數','第幾','順序','排隊','比多少','比較多少','多多少','少多少','前面','位置','基數']],
+  ['上',5,'數到30',['30以內']],
+  ['上',6,'加一加',['10以內的加法','添加型加法']],
+  ['上',7,'認識形狀',['形狀','方盒','圓罐','球','立體','積木','堆疊','正方體','三角形','圓形']],
+  ['上',8,'減一減與加減應用',['10以內的減法','10以內的加減','拿走型減法','加減應用']],
+  ['上',9,'讀鐘錶',['幾點','整點','點半','時鐘','鐘面','長針','短針','上午','中午','晚上','時刻','認識時間','時間']],
+  ['下',1,'數到100',['50以內','100以內','十位','個位','位值','定位板','幾個十','10個一數','十個一數','以十為單位','捆','2個一數','5個一數','倒數','大小比較','比大小','數列','最大','最小','二位數的組成','2的倍數','數數']],
+  ['下',2,'18以內的加法',['18以內的加法','20以內的加法','20以內的進位加法','進位加法','湊十','交換律','加法']],
+  ['下',3,'長度',['有多長','個別單位','迴紋針','方格','□接起來','個□','測量','長度']],
+  ['下',4,'18以內的減法',['18以內的減法','20以內的減法','20以內的退位減法','退位減法','十幾減','減法']],
+  ['下',5,'圖形和形體',['圖形','形體','拼排','圖形板','七巧板','三角形','正方形','長方形','圓形','立體']],
+  ['下',6,'幾月幾日',['日曆','星期','幾月','月曆']],
+  ['下',7,'錢幣',['錢幣','元','錢']],
+  ['下',8,'二位數的加減',['二位數的加','二位數的減','二位數加','二位數減','二位數退位','整十']],
+  ['下',9,'做紀錄',['分類','記錄','紀錄','統計']],
+ ],
+ 2: [
+  ['上',1,'數到300',['200以內','300以內']],
+  ['上',2,'二位數的加減',['二位數的直式','二位數的加法','二位數的減法','二位數退位','二位數進位','連加','直式減法','直式加法']],
+  ['上',3,'幾公分',['量長度','公分','直尺','刻度','個別單位','普遍單位','用尺']],
+  ['上',4,'加減的關係與應用',['加減關係','加減互逆','加減應用','加法和減法','加法與減法','部分與整體','比多少','比較型','多幾','比少','等號','大小比較','<、=、>','＜、＝、＞']],
+  ['上',5,'容量',['容量','容器','杯']],
+  ['上',6,'兩步驟的加減',['加減兩步驟','兩步驟問題（加減）','連減','連續減法','兩步驟加減','先減後加','先加後減']],
+  ['上',7,'2、5、4、8的乘法',['2的乘法','5的乘法','4的乘法','8的乘法']],
+  ['上',8,'幾時幾分',['幾時幾分','幾點幾分','時刻','時鐘','鐘面','數字鐘','電子鐘','時間','小時']],
+  ['上',9,'3、6、7、9的乘法',['3的乘法','6的乘法','9的乘法','7的乘法']],
+  ['上',10,'平面圖形',['平面圖形','頂點','內部','外部','周界','周長','三角形','四邊形','正方形','長方形','五邊形','八邊形','角的認識']],
+  ['下',1,'數到1000',['1000以內','三位數的組成','百位','百格板','個百','位值','錢幣','紙鈔','元']],
+  ['下',2,'加加減減',['三位數的加','三位數的減','三位數加','三位數減','三位數以內','三位數減法','三位數加法','估算','最接近','整百']],
+  ['下',3,'幾公尺',['公尺','公尺與公分','公分與公尺','複名數','長度的計算','長度的合成']],
+  ['下',4,'年月日',['年、月、日','日曆','月曆','星期','幾月','閏年','大月','小月']],
+  ['下',5,'0、1、10的乘法',['乘法','乘以','×','倍','0的乘法','1的乘法','10的乘法']],
+  ['下',6,'重量',['重量','天平','輕重','最重','最輕']],
+  ['下',7,'兩步驟的計算',['兩步驟','先乘','乘與減','乘法與減法','先加後乘','差的倍數']],
+  ['下',8,'分東西',['分分看','平分','等分','分東西']],
+  ['下',9,'單位分數',['分數','幾分之幾','單位分數']],
+  ['下',10,'面的大小與立體',['面積','面的大小','立體','正方體','長方體','柱','球']],
+ ],
+ 3: [
+  ['上',1,'數到10000',['10000以內','一萬以內的數','四位數的位值','位值','定位板','個千','個百','四位數的大小','四位數的讀寫','大小比較','數線']],
+  ['上',2,'四位數的加減',['四位數的加','四位數的減','四位數加','四位數減','四位數連續','加法估算','找錢','退位','進位加法','一萬以內的減法','加法與減法']],
+  ['上',3,'乘法',['乘法','乘以一位數','三位數乘','二位數乘','連乘','乘法與估算','乘積']],
+  ['上',4,'幾毫米',['毫米','公分與毫米','長度單位','複名數加法','複名數減法']],
+  ['上',5,'角',['角','直角']],
+  ['上',6,'正方形和長方形',['長方形','正方形','四邊形']],
+  ['上',7,'除法',['除法','有餘數','餘數','商','平分','包含除','等分除','偶數','奇數']],
+  ['上',8,'找規律',['規律','數列','下一個']],
+  ['上',9,'分數',['分數','單位分數','幾分之幾','假分數']],
+  ['上',10,'圓',['圓','半徑','直徑','圓心','圓規']],
+  ['下',1,'除法',['三位數除以一位數','商中間有0']],
+  ['下',2,'找規律',['規律','數列','下一個']],
+  ['下',3,'時間',['時間','小時','分鐘','秒','經過','時刻']],
+  ['下',4,'兩步驟的計算',['兩步驟','先乘','先除','先減後除','併式','連除']],
+  ['下',5,'面積',['面積','周長','切割','拼合','拼排','重組','平方公分']],
+  ['下',6,'公斤和公克',['公斤','公克','重量','磅秤','秤面']],
+  ['下',7,'分數的加減',['分數的加減','分數加法','分數減法','同分母分數加法','同分母分數減法']],
+  ['下',8,'乘除的應用',['乘除','乘法與除法','乘除互逆','驗算']],
+  ['下',9,'小數',['小數','一位小數','0.1']],
+  ['下',10,'報讀表格',['統計','表格','統計表']],
+ ],
+ 4: [
+  ['上',1,'一億以內的數',['一億以內','億','萬','大數','千萬','百萬','以萬為單位']],
+  ['上',2,'乘法',['整數的乘法','乘以三位數','乘以二位數','二位數乘三位數','四位數乘','三位數乘','乘法進位','直式乘法','乘法']],
+  ['上',3,'角度',['角度','量角器','旋轉','周角','平角','直角','鐘面','度']],
+  ['上',4,'除法',['除法','除以二位數','除以三位數','商','餘數','試商','包含除','等分除']],
+  ['上',5,'三角形',['三角形','等腰','正三角形','銳角三角形','鈍角三角形','直角三角形']],
+  ['上',6,'分數',['分數','假分數','帶分數','分數數線','真分數','分數的整數倍','分數的加減','同分母']],
+  ['上',7,'數量關係',['數量關係','規律','數列']],
+  ['上',8,'整數四則',['四則','先乘除後加減','併式','兩步驟','括號','連乘','連除']],
+  ['上',9,'小數',['小數','二位小數','百分位','0.01','小數的加減','小數數線']],
+  ['上',10,'長度',['公里','長度','公尺']],
+  ['下',1,'多位數的乘與除',['多位數','末尾有0','乘法與除法','乘除應用']],
+  ['下',2,'四邊形',['四邊形','梯形','菱形','平行四邊形','長方形','正方形','垂直','平行','全等','對角線','對應邊','對應角']],
+  ['下',3,'分數的加減和整數倍',['分數的加減','分數的整數倍','同分母','帶分數','假分數']],
+  ['下',4,'概數',['概數','四捨五入','無條件','估算','大約']],
+  ['下',5,'統計圖表',['長條圖','折線圖','統計圖','統計表']],
+  ['下',6,'小數乘以整數',['小數的乘法','小數乘']],
+  ['下',7,'周長與面積',['周長','面積','平方公尺','平方公分']],
+  ['下',8,'等值分數',['等值分數','擴分','約分','分數與小數']],
+  ['下',9,'時間的加減',['時間','小時','分鐘','日']],
+  ['下',10,'立方公分',['立方公分','體積']],
+ ],
+ 5: [
+  ['上',1,'折線圖',['折線圖','長條圖','統計圖']],
+  ['上',2,'因數和倍數',['因數','倍數','公因數','公倍數','最大公因數','最小公倍數']],
+  ['上',3,'多邊形',['多邊形','內角和','三角形','四邊形','兩邊和','邊長關係']],
+  ['上',4,'擴分、約分和通分',['擴分','約分','通分','等值分數','最簡分數']],
+  ['上',5,'線對稱圖形',['線對稱','對稱軸','對稱']],
+  ['上',6,'異分母分數的加減',['異分母']],
+  ['上',7,'整數四則計算',['四則','先乘除後加減','併式','括號','分配律','結合律','速算','湊整','應用問題','平均','整數的乘法','整數的除法','多位數乘法','除法應用']],
+  ['上',8,'平行四邊形、三角形和梯形的面積',['面積','平行四邊形的面積','三角形面積','三角形的面積','梯形面積','多邊形的面積']],
+  ['上',9,'時間的乘除',['時間','日','小時']],
+  ['上',10,'正方體和長方體',['正方體','長方體','展開圖','頂點','稜','面']],
+ ],
+};
+NY[5].push(
+  ['下',1,'分數的計算',['分數的乘法','分數的除法','分數乘','分數除以整數','整數乘以分數','帶分數乘','分數的乘除','分數倍','整數相除','分數表示','分數化成小數','分數']],
+  ['下',2,'數的十進位結構',['多位小數','三位小數','千分位','小數的位值','十進位','小數的大小','小數的加減','兆','大數']],
+  ['下',3,'小數的乘法',['小數的乘法','小數乘以小數','乘數小於1','乘數大於1','小數點位置']],
+  ['下',4,'扇形',['扇形','圓心角']],
+  ['下',5,'體積',['體積','立方公分','立方公尺']],
+  ['下',6,'整數、小數除以整數',['小數的除法','小數除以整數','商到小數','商為小數','商算到小數','除以整數','概數','四捨五入']],
+  ['下',7,'生活中的大單位',['公頃','公畝','平方公里','公噸']],
+  ['下',8,'比率和百分率',['比率','百分率','百分比','折']],
+  ['下',9,'容積和容量',['容積','容量']],
+  ['下',10,'柱體、錐體和球體',['柱','錐','角柱','角錐','球']],
+);
+NY[6] = [
+  ['上',1,'質因數分解和短除法',['最大公因數','最小公倍數','質數','合數','質因數','互質','短除法','公因數','公倍數','因數','倍數']],
+  ['上',2,'分數的除法',['分數的除法','分數除以','除以分數','倒數','帶分數除','整數除以分數','除以帶分數']],
+  ['上',3,'小數的除法',['小數的除法','小數除以','除以小數','小數的乘除','小數除法']],
+  ['上',4,'圓周長和圓面積',['圓周長','圓面積','圓周率','半圓']],
+  ['上',5,'比和比值',['比值','比與比值','按比例分配','按比分配','相等的比','比的','正比']],
+  ['上',6,'扇形的弧長和面積',['扇形周長','扇形面積','弧長']],
+  ['上',7,'速率',['速率','分速','秒速','時速']],
+  ['上',8,'數量關係',['數量關係','等量公理','未知數','用x','以x','等號兩邊']],
+  ['下',1,'四則混合運算',['四則混合','分數與小數','小數化分數','分數的四則','分數的乘法','概數','四捨五入','分配律','四則運算','運算規律']],
+  ['下',2,'圓形圖',['圓形圖','統計圖']],
+  ['下',3,'基準量和比較量',['基準量','比較量','已知分數倍','分數倍']],
+  ['下',4,'放大圖、縮圖和比例尺',['縮圖','放大','縮小','比例尺']],
+  ['下',5,'怎樣解題',['怎樣解題','和差','雞兔','植樹','規律']],
+  ['下',6,'柱體的體積和表面積',['柱體','體積','表面積','長方體','角柱','正方體','圓柱']],
+];
+const VERS = { hl:{name:'翰林', T:HL}, ny:{name:'南一', T:NY} };
+function verList(v, grade){ const T=VERS[v]&&VERS[v].T; return ((T&&T[grade])||[]).map(([s,n,name,kw])=>({grade, sem:s, no:n, name, kw, code:`${grade}${s}${n}`, label:`${grade}${s} 第${CN_NUM[n]}單元 ${name}`})); }
+function verByCode(v, code){ const m=String(code||'').match(/^([1-6])([上下])(\d+)$/); if(!m) return null; return verList(v,+m[1]).find(u=>u.sem===m[2]&&u.no===+m[3])||null; }
+/* 用和康軒相同的計分方式，再加上「康軒單元名稱的關鍵字」做橋接 */
+function verClassify(v, q){
+  const g=+q.grade; const units=verList(v,g); if(!units.length) return null;
+  const k = kxOf(q);
+  const U=String(q.unit||'')+(k?'、'+k.name:''), C=(q.concepts||[]).join('、'), T=String(q.stem||'')+' '+String(q.figureDesc||'');
+  const kxKw = k ? k.kw : [];
+  let best=null, bestS=0;
+  for(const u of units){
+    let s=0;
+    for(const w of u.kw){ if(U.includes(w)) s+=3; if(C.includes(w)) s+=2; if(T.includes(w)) s+=1; if(kxKw.includes(w)) s+=1.5; }
+    if(k && (u.name===k.name || u.name.includes(k.name) || k.name.includes(u.name))) s+=4;
+    if(s>bestS){ bestS=s; best=u; }
+  }
+  const all=U+'、'+C; const pick=c=>verByCode(v,c)||best;
+  /* 二年級乘法：依乘數分到不同單元 */
+  if(g===2 && k && /^2(上7|上9|下5)$/.test(k.code)){
+    best = pick(k.code==='2下5' ? '2下5' : k.code);
+  }
+  if(g===3 && k && k.code==='3下2') best=pick('3下1');
+  if(g===2 && k && k.code==='2上1') best=pick('2上1');
+  if(g===4 && /分數的加減|分數加法|分數減法|分數加減|帶分數.{0,2}[加減]|同分母|整數倍/.test(all)) best=pick(v==='hl'?'4下4':'4下3');
+  if(v==='ny' && g===3 && k && k.code==='3上8') best=null;   /* 南一 114 學年三上沒有公升和毫升，下冊待確認 */
+  if(v==='ny' && g===4 && k && k.code==='4下8') best=pick('4上8');
+  if(v==='ny' && g===5 && k && k.code==='5下1') best=pick('5下5');
+  if(v==='hl' && g===6 && k && /^6上7$/.test(k.code)) best=pick('6下2');
+  if(v==='hl' && g===6 && k && /^6下[12]$/.test(k.code) && /速率|時速|分速|秒速/.test(all+T)) best=pick('6下3');
+  if(v==='hl' && g===6 && k && k.code==='6下4') best=pick('6下5');
+  if(v==='hl' && g===6 && k && k.code==='6下6') best=pick('6下4');
+  if(v==='ny' && g===6 && k && k.code==='6上3') best=pick('6上8');
+  return best;
+}
+
+/* ===== 科目：英語單元來自 questions.json 的 enUnits ===== */
+const DOMAINS_MATH=['數與量','空間與形狀','關係','資料與不確定性'];
+const DOMAINS_EN=['字母與發音','單字','句型與文法','日常用語與對話','閱讀理解','聽力','文化與節慶'];
+let EN_UNITS={};
+function enList(grade){ const out=[]; for(const sem of ['上','下']){ const b=EN_UNITS[`${grade}${sem}`]; if(!b) continue;
+  (b.units||[]).forEach(u=>{ const no=+u.no; const short = no===0?'Starter':(u.review?String(u.title||'Review'):`U${no} ${u.title||''}`);
+    out.push({grade, sem, no, name:String(u.title||''), book:b.book||'', code:`E${grade}${sem}${no}`, chip:short,
+      label:`${grade}${sem} `+(no===0?(u.title&&!/^starter$/i.test(u.title)?'Starter '+u.title:'Starter'):(u.review?String(u.title||'Review'):`Unit ${no} ${u.title||''}`))}); }); }
+  return out; }
+function enByCode(c){ const m=String(c||'').match(/^E([1-6])([上下])(\d+)$/); return m?(enList(+m[1]).find(u=>u.sem===m[2]&&u.no===+m[3])||null):null; }
+const isEN = () => S.subject==='english';
+const VER_NAME={kx:'康軒',hl:'翰林',ny:'南一'};
+const verName = () => isEN() ? '康軒' : VER_NAME[S.ver];
+function unitsFor(g){ return isEN() ? enList(g) : (S.ver==='kx'?kxList(g):verList(S.ver,g)).map(u=>({...u, chip:`${CN_NUM[u.no]}・${u.name}`})); }
+function unitByCode(c){ return /^E/.test(String(c||'')) ? enByCode(c) : (S.ver==='kx'?kxByCode(c):verByCode(S.ver,c)); }
+function uOf(q){ return (q.subject==='english'||S.ver==='kx') ? q._kx : q._v[S.ver]; }
 
 const OPT = ['①','②','③','④','⑤','⑥'];
 const lsGet=(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}};
@@ -414,7 +738,7 @@ const SYN = {
 function expandTerms(q){
   const base = q.split(/[\s、,，;；]+/).map(s=>s.trim()).filter(Boolean);
   const out = new Set(base);
-  base.forEach(t => { Object.entries(SYN).forEach(([k,v]) => { if(t.includes(k) || k.includes(t) && t.length>=2) v.forEach(x=>out.add(x)); }); });
+  if(!isEN()) base.forEach(t => { Object.entries(SYN).forEach(([k,v]) => { if(t.includes(k) || k.includes(t) && t.length>=2) v.forEach(x=>out.add(x)); }); });
   /* 長一點的詞再拆成兩字一組，例如「二位數加法」也能找到「二位數的加法」 */
   const STOP = new Set(['的','以內','認識','和','與','及','數學']);
   const bi = new Set();
@@ -422,7 +746,7 @@ function expandTerms(q){
   return { base, all:[...out], bi:[...bi] };
 }
 
-const S = { qs:[], grade:lsGet('grade',0), q:'', unit:'', prev:lsGet('prev',false), domain:'', year:'',
+const S = { all:[], subject:(()=>{ const h=location.hash.replace('#',''); if(h==='english'||h==='math') return h; return lsGet('subject','math')==='english'?'english':'math'; })(), qs:[], grade:lsGet('grade',0), q:'', unit:'', prev:lsGet('prev',false), ver:(v=>VER_NAME[v]?v:'kx')(lsGet('ver','kx')), domain:'', year:'',
   sel:new Set(lsGet('sel',[])), limit:40, last:[] };
 
 /* ---------- 載入題庫 ---------- */
@@ -451,15 +775,31 @@ async function load(){
 }
 function useData(d){
   const list = Array.isArray(d) ? d : (d.questions||[]);
-  S.qs = list.filter(q=>q && q.stem).map((q,i)=>({ ...q, id:String(q.id||('q'+i)), grade:+q.grade||0, year:String(q.year||''),
+  EN_UNITS = (d && d.enUnits) || {};
+  S.all = list.filter(q=>q && q.stem).map((q,i)=>({ ...q, subject:q.subject==='english'?'english':'math', id:String(q.id||('q'+i)), grade:+q.grade||0, year:String(q.year||''),
     options:Array.isArray(q.options)?q.options:[], concepts:Array.isArray(q.concepts)?q.concepts:[] }));
-  S.qs.forEach(q=>{ q._kx = kxByCode(q.kxUnit) || kxClassify(q); });
+  S.all.forEach(q=>{ q._kx = q.subject==='english' ? enByCode(q.kxUnit) : (kxByCode(q.kxUnit) || kxClassify(q));
+    if(q.subject!=='english') q._v = { hl: verByCode('hl',q.hlUnit) || verClassify('hl',q), ny: verByCode('ny',q.nyUnit) || verClassify('ny',q) }; });
+  if(d.exportedAt) $('#data-date').textContent = `・更新於 ${new Date(d.exportedAt).toLocaleDateString('zh-TW')}・共 ${S.all.length} 題`;
+  ['math','english'].forEach(sj=>{ const n=S.all.filter(q=>q.subject===sj).length; $('#cnt-'+sj).textContent = n ? (sj==='math'?`${n} 題・依康軒・翰林・南一單元查題`:`${n} 題・依康軒單元查題`) : '題庫建置中'; });
+  applySubject();
+}
+function applySubject(){
+  S.qs = S.all.filter(q=>q.subject===S.subject);
   const ids = new Set(S.qs.map(q=>q.id)); S.sel = new Set([...S.sel].filter(id=>ids.has(id)));
-  if(d.exportedAt) $('#data-date').textContent = `・更新於 ${new Date(d.exportedAt).toLocaleDateString('zh-TW')}・共 ${S.qs.length} 題`;
+  document.querySelectorAll('.entry').forEach(b=>b.setAttribute('aria-pressed', b.dataset.s===S.subject));
+  const D = isEN()?DOMAINS_EN:DOMAINS_MATH;
+  $('#f-domain-label').textContent = isEN()?'學習主題':'領域';
+  $('#f-domain').innerHTML = `<option value="">${isEN()?'全部主題':'全部領域'}</option>`+D.map(x=>`<option>${x}</option>`).join('');
+  $('#f-q').placeholder = isEN()?"例如：字母、顏色、數字、What's this?":'例如：分數、周長、有餘數的除法、時間';
   const years=[...new Set(S.qs.map(q=>q.year).filter(Boolean))].sort((a,b)=>b-a);
   $('#f-year').innerHTML = '<option value="">全部</option>'+years.map(y=>`<option value="${esc(y)}">${esc(y)} 學年度</option>`).join('');
+  S.domain=''; S.year=''; S.unit=''; S.limit=40;
+  document.title = `學扶歷屆試題網・${isEN()?'英語':'數學'}`;
   render();
 }
+document.querySelector('.portal').onclick = e => { const b=e.target.closest('.entry'); if(!b||b.dataset.s===S.subject) return; S.subject=b.dataset.s; lsSet('subject',S.subject); try{ history.replaceState(null,'','#'+S.subject); }catch{} applySubject(); };
+window.addEventListener('hashchange',()=>{ const h=location.hash.replace('#',''); if((h==='english'||h==='math') && h!==S.subject){ S.subject=h; applySubject(); } });
 
 /* ---------- 篩選 ---------- */
 function gradeSeg(){
@@ -471,12 +811,13 @@ $('#f-prev').onchange = e => { S.prev=e.target.checked; lsSet('prev',S.prev); re
 $('#f-domain').onchange = e => { S.domain=e.target.value; S.unit=''; render(); };
 $('#f-year').onchange = e => { S.year=e.target.value; render(); };
 let typing; $('#f-q').oninput = e => { clearTimeout(typing); typing=setTimeout(()=>{ S.q=e.target.value.trim(); S.unit=''; S.limit=40; render(); },180); };
+$('#f-ver').onclick = e => { const b=e.target.closest('button'); if(!b||b.dataset.v===S.ver) return; S.ver=b.dataset.v; lsSet('ver',S.ver); S.unit=''; S.limit=40; render(); };
 $('#f-units').onclick = e => { const b=e.target.closest('[data-u]'); if(!b) return; S.unit = S.unit===b.dataset.u ? '' : b.dataset.u; S.limit=40; render(); };
 
 function inGrade(q){ return !S.grade || q.grade===S.grade || (S.prev && q.grade===S.grade-1); }
 function scoreQ(q, terms){
   if(!terms.all.length) return 1;
-  let s=0; const unit=(q.unit||'')+' '+(q._kx?q._kx.name:''), con=q.concepts.join('、'), stem=q.stem||'';
+  let s=0; const unit=(q.unit||'')+' '+(uOf(q)?uOf(q).name:''), con=q.concepts.join('、'), stem=q.stem||'';
   terms.all.forEach(t=>{ const w = terms.base.includes(t)?2:1;
     if(unit.includes(t)) s+=5*w; if(con.includes(t)) s+=4*w; if(stem.includes(t)) s+=1*w; if((q.figureDesc||'').includes(t)) s+=0.5*w; });
   if(terms.bi && terms.bi.length){ const hit = terms.bi.filter(g=>unit.includes(g)||con.includes(g)).length;
@@ -485,7 +826,7 @@ function scoreQ(q, terms){
 }
 function results(){
   const terms = expandTerms(S.q);
-  let list = S.qs.filter(q => (S.unit ? (q._kx&&q._kx.code===S.unit) : inGrade(q)) && (!S.domain || q.domain===S.domain) && (!S.year || q.year===S.year));
+  let list = S.qs.filter(q => (S.unit ? (uOf(q)&&uOf(q).code===S.unit) : inGrade(q)) && (!S.domain || q.domain===S.domain) && (!S.year || q.year===S.year));
   list = list.map(q=>[q, scoreQ(q,terms)]).filter(x=>x[1]>0);
   list.sort((a,b)=> (b[1]-a[1]) || ((S.grade && a[0].grade!==b[0].grade) ? b[0].grade-a[0].grade : 0) || (+b[0].year||0)-(+a[0].year||0) || (a[0].grade-b[0].grade) || (parseInt(a[0].number)||0)-(parseInt(b[0].number)||0));
   return { list:list.map(x=>x[0]), terms };
@@ -501,25 +842,27 @@ function qSource(q){ return [q.year?q.year+' 學年度':'學年度未填', q.gra
 /* ---------- 畫面 ---------- */
 function render(){
   gradeSeg();
+  $('#ver-field').hidden = isEN();
+  document.querySelectorAll('#f-ver button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.v===S.ver));
   // 康軒單元
   if(S.grade){
     const base = S.qs.filter(q=>q.grade===S.grade && (!S.domain||q.domain===S.domain) && (!S.year||q.year===S.year));
-    const cnt=new Map(); base.forEach(q=>{ if(q._kx) cnt.set(q._kx.code,(cnt.get(q._kx.code)||0)+1); });
-    $('#unit-label').textContent = `康軒 ${GN[S.grade]}年級單元（點一下列出該單元的考古題）`;
-    $('#f-units').innerHTML = ['上','下'].map(sem=>`<div class="semrow"><b>${S.grade}${sem}</b>${kxList(S.grade).filter(u=>u.sem===sem).map(u=>{ const c=cnt.get(u.code)||0;
-      return `<button class="chip" data-u="${u.code}" aria-pressed="${S.unit===u.code}" ${c?'':'disabled'} title="${esc(u.label)}">${CN_NUM[u.no]}・${esc(u.name)}<b>${c}</b></button>`; }).join('')}</div>`).join('');
+    const cnt=new Map(); base.forEach(q=>{ const u=uOf(q); if(u) cnt.set(u.code,(cnt.get(u.code)||0)+1); });
+    $('#unit-label').textContent = `${verName()}${isEN()?'英語':''} ${GN[S.grade]}年級單元（點一下列出該單元的考古題）`;
+    $('#f-units').innerHTML = ['上','下'].map(sem=>`<div class="semrow"><b>${S.grade}${sem}</b>${unitsFor(S.grade).filter(u=>u.sem===sem).length?'':`<span style="color:var(--muted);font-size:13px">${isEN()?'這一冊的單元尚未建立':''}</span>`}${unitsFor(S.grade).filter(u=>u.sem===sem).map(u=>{ const c=cnt.get(u.code)||0;
+      return `<button class="chip" data-u="${u.code}" aria-pressed="${S.unit===u.code}" ${c?'':'disabled'} title="${esc(u.label)}">${esc(u.chip)}<b>${c}</b></button>`; }).join('')}</div>`).join('');
   } else {
-    $('#unit-label').textContent = '康軒單元';
-    $('#f-units').innerHTML = '<span style="color:var(--muted);font-size:13px">先選年級，就會列出康軒上、下學期的單元。</span>';
+    $('#unit-label').textContent = verName()+'單元';
+    $('#f-units').innerHTML = `<span style="color:var(--muted);font-size:13px">先選年級，就會列出${verName()}上、下學期的單元。</span>`;
   }
 
   const {list, terms} = results(); S.last=list;
   const extra = terms.all.filter(t=>!terms.base.includes(t));
   $('#f-expand').textContent = extra.length ? `也一併搜尋：${extra.slice(0,14).join('、')}` : '';
-  $('#r-title').textContent = S.unit ? `康軒 ${(kxByCode(S.unit)||{}).label||''}` : (S.q ? `「${S.q}」相關考古題` : '考古題');
+  $('#r-title').textContent = S.unit ? `${verName()} ${(unitByCode(S.unit)||{}).label||''}` : (S.q ? `「${S.q}」相關考古題` : '考古題');
   $('#r-count').textContent = S.qs.length ? `共 ${list.length} 題` : '';
   const el=$('#r-list');
-  if(!S.qs.length){ el.innerHTML = '<div class="empty"><strong>題庫還沒載入</strong>請先在上方選擇 questions.json。</div>'; $('#r-more').hidden=true; renderTray(); return; }
+  if(!S.qs.length){ el.innerHTML = S.all.length ? `<div class="empty"><strong>${isEN()?'英語':'數學'}題庫建置中</strong>題目整理好之後就會出現在這裡。</div>` : '<div class="empty"><strong>題庫還沒載入</strong>請先在上方選擇 questions.json。</div>'; $('#r-more').hidden=true; renderTray(); return; }
   if(!list.length){ el.innerHTML = `<div class="empty"><strong>找不到相關題目</strong>換個說法試試，例如「分數」「周長」「時間」，或勾選前一年級。</div>`; $('#r-more').hidden=true; renderTray(); return; }
   el.innerHTML = list.slice(0,S.limit).map(q=>{
     const pre = S.grade && q.grade===S.grade-1;
@@ -529,8 +872,9 @@ function render(){
         <div class="origin"><span>${esc(qSource(q))}</span>${q.source?`<em>${esc(q.source)}</em>`:''}${pre?'<span class="chip pre">先備概念</span>':''}</div>
         <div class="stem">${hl(q.stem, terms)}</div>
         ${q.options.length?`<ol class="opts">${q.options.map((x,i)=>`<li>${OPT[i]||(i+1)+'.'} ${esc(x)}</li>`).join('')}</ol>`:''}
+        ${q.listening?`<div class="listen"><b>聽力題</b>${q.listenScript?'聽力內容：'+esc(q.listenScript):'原試卷需播放錄音，請老師念題或略過。'}</div>`:''}
         ${q.figure?`<figure class="qfig"><img src="${esc(q.figure)}" alt="${esc(q.figureDesc||'題目附圖')}" loading="lazy"></figure>`:(q.hasFigure&&q.figureDesc?`<div class="fig">附圖：${esc(q.figureDesc)}</div>`:'')}
-        <div class="chips">${q._kx?`<span class="chip kx">康軒 ${esc(q._kx.label)}</span>`:''}${q.domain?`<span class="chip dom">${esc(q.domain)}</span>`:''}${q.unit?`<span class="chip dom">${hl(q.unit,terms)}</span>`:''}${q.concepts.map(c=>`<span class="chip">${hl(c,terms)}</span>`).join('')}</div>
+        <div class="chips">${uOf(q)?`<span class="chip kx">${verName()} ${esc(uOf(q).label)}</span>`:''}${q.domain?`<span class="chip dom">${esc(q.domain)}</span>`:''}${q.unit?`<span class="chip dom">${hl(q.unit,terms)}</span>`:''}${q.concepts.map(c=>`<span class="chip">${hl(c,terms)}</span>`).join('')}</div>
         <details><summary>看答案</summary><div class="ans">${esc(q.answer||'—')}${q.answerSource==='ai'?' <span class="chip ai" style="font-family:var(--f-body)">AI 解答，請核對</span>':''}</div></details>
       </div></article>`; }).join('');
   $('#r-more').hidden = list.length <= S.limit;
@@ -569,7 +913,7 @@ function ensureLibs(){ if(!libs) libs=(async()=>{ await loadScript('https://cdnj
 $('#t-pdf').onclick = () => {
   const P = lsGet('pdf',{key:true,space:true,tag:true});
   const qs = selected(); const g = [...new Set(qs.map(q=>q.grade))];
-  const defTitle = (g.length===1?GN[g[0]]+'年級':'')+'數學學習單'+(S.unit?'：'+((kxByCode(S.unit)||{}).name||''):(S.q?'：'+S.q:''));
+  const defTitle = (g.length===1?GN[g[0]]+'年級':'')+(isEN()?'英語':'數學')+'學習單'+(S.unit?'：'+((unitByCode(S.unit)||{}).name||''):(S.q?'：'+S.q:''));
   $('#modal-root').innerHTML = `<div class="modal" id="m"><div>
     <div class="row" style="justify-content:space-between"><h3>下載學習單（${qs.length} 題）</h3><button class="btn ghost sm" id="m-x">取消</button></div>
     <div class="field"><span class="label">學習單標題</span><input type="text" id="p-title" value="${esc(defTitle)}"></div>
@@ -634,6 +978,7 @@ async function makeDocx(qs,o){
     const ch=q.options.length>0;
     body += para(run(`${i+1}. ${ch?'(　　) ':''}`,{size:28})+run(q.stem,{size:28}),{before:200,after:40,indent:560,hanging:560,keepNext:true});
     if(o.tag) body += para(run(qSource(q)+(q.source?'・'+q.source:''),{size:18,color:'777777',font:SANS}),{after:40,indent:560,keepNext:true});
+    if(q.listening) body += para(run('〔聽力題〕'+(q.listenScript?'老師念：'+q.listenScript:'請老師念題'),{size:21,color:'2A4FA8',font:SANS}),{after:40,indent:560});
     if(q._fig){ const n=media.length+1; media.push({...q._fig, rid:'rIdImg'+n, name:'image'+n+'.'+q._fig.ext}); body += picXML('rIdImg'+n, n, q._fig.w, q._fig.h); }
     else if(q.hasFigure&&q.figureDesc) body += para(run('〔附圖〕'+q.figureDesc,{size:21,color:'444444',font:SANS}),{after:40,indent:560});
     if(ch) body += optTable(q.options);
@@ -672,6 +1017,7 @@ async function makePdf(qs, o, prog){
     mk(`<div class="qn"><div class="no">${ch?'(　　) ':''}${i+1}.</div><div class="st">${esc(q.stem)}</div>
       ${o.tag?`<div class="tag">${esc(qSource(q))}${q.source?'・'+esc(q.source):''}</div>`:''}
       ${ch?`<ol>${q.options.map((x,j)=>`<li>(${j+1}) ${esc(x)}</li>`).join('')}</ol>`:''}
+      ${q.listening?`<div class="fg">聽力題${q.listenScript?'（老師念）：'+esc(q.listenScript):'（請老師念題）'}</div>`:''}
       ${q.figure?`<div class="fgi"><img src="${esc(q.figure)}" alt=""></div>`:(q.hasFigure&&q.figureDesc?`<div class="fg">附圖說明：${esc(q.figureDesc)}</div>`:'')}
       ${o.space?`<div class="sp" style="height:${ch?56:96}px">${ch?'':'答：＿＿＿＿＿＿＿＿＿＿'}</div>`:(ch?'':'<div class="sp">答：＿＿＿＿＿＿＿＿＿＿</div>')}</div>`); });
   if(o.key){ mk(`<div class="sec">答案（${esc(o.title)}）</div>`,{newPage:true});
