@@ -674,9 +674,9 @@ const DOMAINS_MATH=['數與量','空間與形狀','關係','資料與不確定�
 const DOMAINS_EN=['字母與發音','單字','句型與文法','日常用語與對話','閱讀理解','聽力','文化與節慶'];
 let EN_UNITS={};
 function enList(grade){ const out=[]; for(const sem of ['上','下']){ const b=EN_UNITS[`${grade}${sem}`]; if(!b) continue;
-  (b.units||[]).forEach(u=>{ const no=+u.no; const short = no===0?'Starter':(u.review?String(u.title||'Review'):`U${no} ${u.title||''}`);
+  (b.units||[]).forEach(u=>{ const no=+u.no; const short = no===0?String(u.title||'Starter'):(u.review?String(u.title||'Review'):`U${no} ${u.title||''}`);
     out.push({grade, sem, no, name:String(u.title||''), book:b.book||'', code:`E${grade}${sem}${no}`, chip:short,
-      label:`${grade}${sem} `+(no===0?(u.title&&!/^starter$/i.test(u.title)?'Starter '+u.title:'Starter'):(u.review?String(u.title||'Review'):`Unit ${no} ${u.title||''}`))}); }); }
+      label:`${grade}${sem} `+(no===0?String(u.title||'Starter'):(u.review?String(u.title||'Review'):`Unit ${no} ${u.title||''}`))}); }); }
   return out; }
 function enByCode(c){ const m=String(c||'').match(/^E([1-6])([上下])(\d+)$/); return m?(enList(+m[1]).find(u=>u.sem===m[2]&&u.no===+m[3])||null):null; }
 const isEN = () => S.subject==='english';
@@ -846,9 +846,9 @@ function render(){
   document.querySelectorAll('#f-ver button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.v===S.ver));
   // 康軒單元
   if(S.grade){
-    const base = S.qs.filter(q=>q.grade===S.grade && (!S.domain||q.domain===S.domain) && (!S.year||q.year===S.year));
-    const cnt=new Map(); base.forEach(q=>{ const u=uOf(q); if(u) cnt.set(u.code,(cnt.get(u.code)||0)+1); });
-    $('#unit-label').textContent = `${verName()}${isEN()?'英語':''} ${GN[S.grade]}年級單元（點一下列出該單元的考古題）`;
+    const base = S.qs.filter(q=>(isEN()||q.grade===S.grade) && (!S.domain||q.domain===S.domain) && (!S.year||q.year===S.year));
+    const cnt=new Map(); base.forEach(q=>{ const u=uOf(q); if(u && u.grade===S.grade) cnt.set(u.code,(cnt.get(u.code)||0)+1); });
+    $('#unit-label').textContent = `${verName()}${isEN()?'英語 Wonder World':''} ${GN[S.grade]}年級單元（點一下列出${isEN()?'各年級試卷中考這個單元內容的題目':'該單元的考古題'}）`;
     $('#f-units').innerHTML = ['上','下'].map(sem=>`<div class="semrow"><b>${S.grade}${sem}</b>${unitsFor(S.grade).filter(u=>u.sem===sem).length?'':`<span style="color:var(--muted);font-size:13px">${isEN()?'這一冊的單元尚未建立':''}</span>`}${unitsFor(S.grade).filter(u=>u.sem===sem).map(u=>{ const c=cnt.get(u.code)||0;
       return `<button class="chip" data-u="${u.code}" aria-pressed="${S.unit===u.code}" ${c?'':'disabled'} title="${esc(u.label)}">${esc(u.chip)}<b>${c}</b></button>`; }).join('')}</div>`).join('');
   } else {
@@ -865,7 +865,7 @@ function render(){
   if(!S.qs.length){ el.innerHTML = S.all.length ? `<div class="empty"><strong>${isEN()?'英語':'數學'}題庫建置中</strong>題目整理好之後就會出現在這裡。</div>` : '<div class="empty"><strong>題庫還沒載入</strong>請先在上方選擇 questions.json。</div>'; $('#r-more').hidden=true; renderTray(); return; }
   if(!list.length){ el.innerHTML = `<div class="empty"><strong>找不到相關題目</strong>換個說法試試，例如「分數」「周長」「時間」，或勾選前一年級。</div>`; $('#r-more').hidden=true; renderTray(); return; }
   el.innerHTML = list.slice(0,S.limit).map(q=>{
-    const pre = S.grade && q.grade===S.grade-1;
+    const pre = !S.unit && S.grade && q.grade===S.grade-1;
     return `<article class="qcard ${S.sel.has(q.id)?'sel':''}" data-id="${esc(q.id)}">
       <input type="checkbox" aria-label="選這題" ${S.sel.has(q.id)?'checked':''}>
       <div>
